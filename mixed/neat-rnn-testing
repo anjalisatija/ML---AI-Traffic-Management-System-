@@ -1,0 +1,59 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import configparser
+
+def read_config():
+    config = configparser.ConfigParser()
+    config.read('D:\\KUSHAGRA\\DATA\\K_Works\\ML AI TMS\\mixed\\config-neat.txt')
+    return config['Network']
+
+def create_model(config):
+    num_timesteps = int(config['num_timesteps'])
+    num_features = int(config['num_features'])
+    hidden_units_1 = int(config['hidden_layer_1'])
+    hidden_units_2 = int(config['hidden_layer_2'])
+    hidden_units_3 = int(config['hidden_layer_3'])
+    hidden_units_4 = int(config['hidden_layer_4'])
+    output_units = int(config['output_units'])
+
+    model = models.Sequential()
+    model.add(layers.Input(shape=(num_timesteps, num_features)))
+    model.add(layers.SimpleRNN(hidden_units_1, activation='relu', return_sequences=True))
+    model.add(layers.SimpleRNN(hidden_units_2, activation='relu', return_sequences=True))
+    model.add(layers.SimpleRNN(hidden_units_3, activation='relu', return_sequences=True))
+    model.add(layers.SimpleRNN(hidden_units_4, activation='relu', return_sequences=True))
+    model.add(layers.GlobalMaxPooling1D())
+    model.add(layers.Dense(output_units))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
+
+class TrafficSimulation:
+    def __init__(self):
+        self.road_rage_value = 0
+        self.max_timesteps = 100
+
+    def step(self, action):
+        if action == 'wait':
+            self.road_rage_value += 1
+        return 1 / (self.road_rage_value + 1)
+
+def generate_data(num_samples, num_timesteps, num_features, output_units):
+    X = np.random.random((num_samples, num_timesteps, num_features))
+    y = np.random.random((num_samples, output_units))
+    return X, y
+
+if __name__ == "__main__":
+    config = read_config()
+    model = create_model(config)
+    print(model.summary())
+    
+    X_train, y_train = generate_data(1000, int(config['num_timesteps']), int(config['num_features']), int(config['output_units']))
+
+    model.fit(X_train, y_train, epochs=10, batch_size=32)
+
+    sim = TrafficSimulation()
+    for timestep in range(sim.max_timesteps):
+        action = np.random.choice(['wait', 'go'])
+        score = sim.step(action)
+        print(f'Timestep {timestep}: Action: {action}, Road Rage Value: {sim.road_rage_value}, Score: {score:.4f}')
